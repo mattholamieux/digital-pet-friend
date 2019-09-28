@@ -1,5 +1,12 @@
 // Based on https://kylemcdonald.github.io/cv-examples/
 
+const FaceType = {
+  none: 'none',
+  unknown: 'unknown',
+}
+
+Object.keys(emotionModel).forEach(emotion => FaceType[emotion] = emotion);
+
 class FaceDetector {
   constructor(width, height) {
     this.w = width || 640;
@@ -32,22 +39,20 @@ class FaceDetector {
   }
 
   update() {
-    let description
+    let faceType = FaceType.unknown;
 
     if (tracker.getCurrentPosition()) {
       let predictions = classifier.meanPredict(tracker.getCurrentParameters());
 
       if (predictions) {
-        description = predictions.reduce((mostLikely, prediction) =>
+        faceType = predictions.reduce((mostLikely, prediction) =>
           (mostLikely == null || prediction.value > mostLikely.value) ? prediction : mostLikely
         ).emotion;
-      } else {
-        description = 'just a face'
       }
     } else {
-      description = 'no one there :('
+      faceType = FaceType.none;
     }
 
-    return description
+    return faceType
   }
 }
