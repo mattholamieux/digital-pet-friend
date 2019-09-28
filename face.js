@@ -1,12 +1,5 @@
 // Based on https://kylemcdonald.github.io/cv-examples/
 
-const FaceType = {
-  none: 'none',
-  unknown: 'unknown',
-}
-
-Object.keys(emotionModel).forEach(emotion => FaceType[emotion] = emotion);
-
 class FaceDetector {
   constructor(width, height) {
     this.w = width || 640;
@@ -25,34 +18,40 @@ class FaceDetector {
       console.log('capture ready.');
     });
     this.capture.elt.setAttribute('playsinline', '');
-    createCanvas(w, h);
-    this.capture.size(w, h);
+    this.capture.size(this.w, this.h);
     this.capture.hide();
 
     colorMode(HSB);
 
     this.tracker = new clm.tracker();
     this.tracker.init();
-    this.tracker.start(capture.elt);
+    this.tracker.start(this.capture.elt);
 
-    classifier.init(emotionModel);
+    this.classifier.init(emotionModel);
+    this.happinessMeter = 1; // 0 means unhappy, 1 means happy
   }
 
   update() {
-    let faceType = FaceType.unknown;
+    let happyValue;
 
-    if (tracker.getCurrentPosition()) {
-      let predictions = classifier.meanPredict(tracker.getCurrentParameters());
+    if (this.tracker.getCurrentPosition()) {
+      let predictions = this.classifier.meanPredict(this.tracker.getCurrentParameters());
 
       if (predictions) {
-        faceType = predictions.reduce((mostLikely, prediction) =>
-          (mostLikely == null || prediction.value > mostLikely.value) ? prediction : mostLikely
-        ).emotion;
+        const happy = predictions.find(prediction => prediction.emotion === 'happy');
+        if (happy) {
+          // We found a happy prediction, this is our new happyValue
+          happyValue = happy.value;
+        }
       }
     } else {
-      faceType = FaceType.none;
+      // No faces detected, you're not at the computer, so you must be the happiest!
+      happyValue = 1;
     }
 
-    return faceType
+    if (happyValue != null) {
+      this.happinessMeter = constrain(this.happinessMeter * 0.95 + happyValue * 0.05, 0, 1);
+    }
+    return this.happinessMeter;
   }
 }
