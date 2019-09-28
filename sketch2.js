@@ -25,13 +25,17 @@ let scl = 50;
 let synth;
 let envelope;
 let note = 0;
-let happyMelody = ['C3', 'G4', 'D4', 'C3', 'A3', 'G3', 'C4', 'C2'];
+let happyMelody = ['C2', 'G3', 'D3', 'C2', 'A2', 'G2', 'C3', 'C1'];
 let sadMelody = ['D2', 'E2', 'C1', 'F#2', 'Gb1', 'Db2', 'C2'];
 let glitch;
 let imgSrc = 'assets/Tamagotchi  upset/sprite_2.png';
 let emotion;
 let button;
-let detoon = 0;
+
+// let i = 0;
+let creature;
+var scaler = 200;
+var grow = 0;
 
 // preload drawing files
 function preload() {
@@ -58,24 +62,19 @@ function setup() {
   envelope = new p5.Env();
   envelope.setRange(1, 0);
   envelope.setADSR(0.001, 0.5, 0.1, 0.5);
-  synth = new Tone.PolySynth(6, Tone.Synth, {
-    oscillator: {
-      type: "triangle"
-    },
-    polyphony: 8,
-    volume: 0,
-    detune: 0,
-  }).toMaster();
+  synth = new p5.PolySynth();
   emotion = 'happy';
   button = createButton('change emotion');
   button.position(19, 19);
   button.mousePressed(changeEmotion);
+  creature = new Creature(width/2, height/2);
 }
 
 function draw() {
 
   if (emotion === 'sad' && glitch) {
     background(255);
+    	creature.show();
     drawSprites();
     glitch.show();
     pet.changeAnimation('upset');
@@ -212,11 +211,12 @@ Particle.prototype.display = function(other) {
 
 function playSynth() {
   if (emotion === 'happy') {
-    detoon = 0;
-    synth.volume.value = 0;
-    synth.detune.value = 0;
+    let dur = 1.5;
+    let time = 0;
+    let vel = 0.5;
     if (frameCount % 10 === 0) {
-      synth.triggerAttackRelease([happyMelody[note]], "16n");
+      synth.noteAttack(happyMelody[note], vel, 0, dur);
+      synth.noteRelease(happyMelody[note], 0.15);
       note++
       if (note > happyMelody.length - 1) {
         note = 0;
@@ -224,24 +224,106 @@ function playSynth() {
     }
   }
   if (emotion === 'sad') {
-    synth.volume.value = -10;
-    synth.detune.value = detoon;
-    synth.triggerAttackRelease([happyMelody[note]], "4n");
+    let dur = 1.5;
+    let time = 0;
+    let vel = 0.5;
+    synth.noteAttack(sadMelody[note], vel, 0, dur);
+    synth.noteRelease(sadMelody[note], 1.5);
     note++
     if (note > sadMelody.length - 1) {
       note = 0;
     }
-    detoon++;
   }
 }
 
 
-function changeEmotion() {
-  if (emotion === 'happy') {
+function changeEmotion(){
+  if (emotion === 'happy'){
     emotion = 'sad';
   } else {
     emotion = 'happy';
   }
   note = 0;
+}
 
+class Creature {
+constructor(x,y){
+	this.x = x;
+	this.y = y;
+	this.m = random(0,20);
+	this.n1 = random(-50, 50);
+	this.n2 = random(-50, 50);
+	this.n3 = random(-50, 50);
+	// this.osc = new p5.Oscillator();
+}
+
+
+	show() {
+		fill(random(100),random(200), 200);
+		stroke(random(255),100, 20);
+		strokeWeight(random(3,10));
+
+		push();
+		translate(this.x, this.y);
+
+		var newscaler = scaler;
+		for (var s = grow; s > 0; s--) {
+			beginShape();
+
+			var mm = this.m +s;
+			var nn1 = this.n1 + s;
+			var nn2 = this.n2 + s;
+			var nn3 = this.n3 + s;
+			newscaler = newscaler * 0.98
+			var sscaler = newscaler;
+
+			var points = superformula(mm, nn1, nn2, nn3);
+			curveVertex(points[points.length-1].x * sscaler, points[points.length-1].y * sscaler);
+		for (var i = 0; i < points.length; i++) {
+			curveVertex(points[i].x * sscaler, points[i].y * sscaler);
+		}
+		curveVertex(points[0].x * sscaler, points[0].y * sscaler);
+		endShape();
+		}
+		pop();
+	}
+}
+
+
+function superformula(m, n1, n2, n3) {
+	var numPoints = 360;
+	var phi = TWO_PI / numPoints;
+	var points = []
+	for (var i = 0; i <= numPoints; i++) {
+		points[i] = superformulaPoint(m, n1, n2, n3, phi * i);
+	}
+	return points;
+}
+
+function superformulaPoint(m, n1, n2, n3, phi) {
+	var r;
+	var t1,t2;
+	var a=1,b=1;
+	var x = 0;
+	var y = 0;
+
+	t1 = cos(m * phi / 4) / a;
+	t1 = abs(t1);
+	t1 = pow(t1,n2);
+
+	t2 = sin(m * phi / 4) /b;
+	t2 = abs(t2);
+	t2 = pow(t2,n3);
+
+	r = pow(t1+t2, 1/n1);
+	if (abs(r) == 0) {
+		x =0;
+		y = 0;
+	}
+	else {
+		r = 1/ r;
+		x = r * cos(phi);
+		y = r * sin(phi);
+	}
+	return new p5.Vector(x,y);
 }
