@@ -1,13 +1,13 @@
-// Based on https://kylemcdonald.github.io/cv-examples/
-
 class FaceDetector {
   constructor(width, height) {
     this.w = width || 640;
     this.h = height || 480;
+    this.options = new faceapi.TinyFaceDetectorOptions({ inputSize: 128 });
+    this.captureReady = false;
+    this.detectorReady = false;
   }
 
   setup() {
-    this.classifier = new emotionClassifier();
     this.capture = createCapture({
       audio: false,
       video: {
@@ -16,42 +16,31 @@ class FaceDetector {
       }
     }, () => {
       console.log('capture ready.');
+      this.captureReady = true;
     });
     this.capture.elt.setAttribute('playsinline', '');
     this.capture.size(this.w, this.h);
     this.capture.hide();
 
-    colorMode(HSB);
+    faceapi.nets.tinyFaceDetector.loadFromUri('assets/models').then(() => {
+      console.log('face detector ready.');
+      this.detectorReady = true;
+    })
 
-    this.tracker = new clm.tracker();
-    this.tracker.init();
-    this.tracker.start(this.capture.elt);
-
-    this.classifier.init(emotionModel);
-    this.happinessMeter = 1; // 0 means unhappy, 1 means happy
+    this.happinessLevel = 1; // 0 means unhappy, 1 means happy
   }
 
   update() {
-    let happyValue;
-
-    if (this.tracker.getCurrentPosition()) {
-      let predictions = this.classifier.meanPredict(this.tracker.getCurrentParameters());
-
-      if (predictions) {
-        const happy = predictions.find(prediction => prediction.emotion === 'happy');
-        if (happy) {
-          // We found a happy prediction, this is our new happyValue
-          happyValue = happy.value;
-        }
-      }
-    } else {
-      // No faces detected, you're not at the computer, so you must be the happiest!
-      happyValue = 1;
+    if (this.captureReady && this.detectorReady) {
+      return faceapi.detectSingleFace(this.capture.elt, this.options).then(result => {
+        // You're happy only if you aren't looking at the computer.
+        const happyValue = result ? 0 : 1;
+        this.happinessLevel = this.happinessLevel * 0.98 + happyValue * 0.02;
+      });
     }
+  }
 
-    if (happyValue != null) {
-      this.happinessMeter = constrain(this.happinessMeter * 0.95 + happyValue * 0.05, 0, 1);
-    }
-    return this.happinessMeter;
+  getHappinessLevel() {
+    return this.happinessLevel;
   }
 }

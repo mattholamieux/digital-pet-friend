@@ -30,9 +30,9 @@ let sadMelody = ['D2', 'E2', 'C1', 'F#2', 'Gb1', 'Db2', 'C2'];
 let glitch;
 let imgSrc = 'assets/Tamagotchi  upset/sprite_2.png';
 let emotion;
-let button;
 let detoon = 0;
 const faceDetector = new FaceDetector();
+let happinessMeter;
 
 // preload drawing files
 function preload() {
@@ -68,17 +68,18 @@ function setup() {
     detune: 0,
   }).toMaster();
   emotion = 'happy';
-  button = createButton('change emotion');
-  button.position(19, 19);
-  button.mousePressed(changeEmotion);
 
   faceDetector.setup();
 }
 
 function draw() {
-  const happinessMeter = faceDetector.update();
-  emotion = happinessMeter > 0.5 ? 'happy' : 'sad';
-  console.log(happinessMeter);
+  if (frameCount % 15 === 0) {
+    faceDetector.update();
+  }
+
+  const happinessLevel = faceDetector.getHappinessLevel();
+  emotion = happinessLevel > 0.5 ? 'happy' : 'sad';
+
   background(249, 255, 143);
 
   if (emotion === 'sad' && glitch) {
@@ -136,7 +137,7 @@ function draw() {
 
   // Draw happiness bar
   fill(emotion === 'sad' ? 'red' : 'green');
-  rect(0, 0, 200 * happinessMeter, 20);
+  rect(0, 0, 200 * happinessLevel, 20);
 }
 
 // Start it up
